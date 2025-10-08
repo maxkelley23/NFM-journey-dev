@@ -53,27 +53,22 @@ export async function POST(request: Request) {
   const planJson = JSON.stringify(plan, null, 2);
 
   try {
-    const response = await openai.responses.create({
+    const response = await openai.chat.completions.create({
       model: "gpt-4o",
       temperature: 0.6,
-      input: [
+      messages: [
         {
           role: "system",
-          content: [{ type: "text", text: SYSTEM_PROMPT }]
+          content: SYSTEM_PROMPT
         },
         {
           role: "user",
-          content: [
-            {
-              type: "text",
-              text: writerPrompt(planJson, intake, snippetText, abSubjects)
-            }
-          ]
+          content: writerPrompt(planJson, intake, snippetText, abSubjects)
         }
       ]
     });
 
-    const text = response.output_text?.trim() ?? "";
+    const text = response.choices[0]?.message?.content?.trim() ?? "";
     const validation = validateCampaignOutput(text, {
       abSubjects,
       expectedSteps: plan.steps.filter((step) => step.type === "email").length

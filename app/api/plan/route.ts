@@ -64,22 +64,23 @@ async function fetchPlanFromOpenAI(intake: IntakePayload) {
   }
 
   try {
-    const response = await openai.responses.create({
+    const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0.2,
-      input: [
+      response_format: { type: "json_object" },
+      messages: [
         {
           role: "system",
-          content: [{ type: "text", text: SYSTEM_PROMPT }]
+          content: SYSTEM_PROMPT
         },
         {
           role: "user",
-          content: [{ type: "text", text: plannerPrompt(intake) }]
+          content: plannerPrompt(intake)
         }
       ]
     });
 
-    const output = response.output_text;
+    const output = response.choices[0]?.message?.content ?? "";
     const candidate = JSON.parse(output);
     const parsedPlan = planSchema.safeParse(candidate);
     if (!parsedPlan.success) {
