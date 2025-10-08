@@ -1,8 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Chat } from "@/app/components/Chat";
-import { Output } from "@/app/components/Output";
+import { ModernChat } from "@/app/components/ModernChat";
+import { ModernOutput } from "@/app/components/ModernOutput";
+import { ThemeToggle } from "@/app/components/ThemeToggle";
+import { motion } from "framer-motion";
+import { AlertTriangle } from "lucide-react";
 import type { IntakeAnswers } from "@/app/lib/catalog/intake";
 import { selectToneSnippets } from "@/app/lib/catalog/tone";
 import type { IntakePayload } from "@/app/lib/schemas/intake";
@@ -115,101 +118,69 @@ export default function HomePage() {
   };
 
   return (
-    <main className="page">
-      <section className="stack">
-        <Chat key={sessionId} onComplete={handleComplete} isLoading={isLoading} />
+    <main className="min-h-screen p-4 md:p-8">
+      <ThemeToggle />
+      <div className="max-w-7xl mx-auto space-y-8">
+        <ModernChat key={sessionId} onComplete={handleComplete} isLoading={isLoading} />
+
         {error && (
-          <div className="error-banner">
-            <strong>We hit a snag:</strong> {error}
-          </div>
+          <motion.div
+            className="card p-4 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20"
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-red-600 dark:text-red-400" />
+              <div>
+                <strong className="text-red-900 dark:text-red-200">We hit a snag:</strong>
+                <span className="ml-2 text-red-700 dark:text-red-300">{error}</span>
+              </div>
+            </div>
+          </motion.div>
         )}
-        <Output text={campaignText} isLoading={isLoading} onReset={answers ? handleReset : undefined} />
-        {plan && (
-          <section className="plan-preview">
-            <h3>Plan overview</h3>
-            <ol>
-              {plan.steps.map((step) => (
-                <li key={`${step.type}-${step.n}`}>
-                  <span className="step-number">Step {step.n}</span>
-                  <span className="step-type">{step.type.toUpperCase()}</span>
-                  <span>Delay: {step.delay} days</span>
-                  <span className="purpose">{step.purpose}</span>
-                </li>
+
+        <ModernOutput text={campaignText} isLoading={isLoading} onReset={answers ? handleReset : undefined} />
+
+        {plan && !campaignText && (
+          <motion.section
+            className="card p-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-gray-100">
+              Plan Overview
+            </h3>
+            <div className="space-y-3">
+              {plan.steps.map((step, index) => (
+                <motion.div
+                  key={`${step.type}-${step.n}`}
+                  className="flex items-center gap-4 p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-600 dark:text-blue-400 font-semibold text-sm">
+                    {step.n}
+                  </span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium uppercase tracking-wider ${
+                    step.type === 'email'
+                      ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300'
+                      : 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300'
+                  }`}>
+                    {step.type}
+                  </span>
+                  <span className="text-sm text-gray-600 dark:text-gray-400">
+                    Day {step.delay}
+                  </span>
+                  <span className="flex-1 text-sm text-gray-700 dark:text-gray-300">
+                    {step.purpose}
+                  </span>
+                </motion.div>
               ))}
-            </ol>
-          </section>
+            </div>
+          </motion.section>
         )}
-      </section>
-
-      <style jsx>{`
-        .page {
-          padding: 2rem clamp(1.5rem, 4vw, 3rem);
-          max-width: 1200px;
-          margin: 0 auto;
-        }
-
-        .stack {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-
-        .error-banner {
-          background: #fee2e2;
-          color: #b91c1c;
-          padding: 1rem;
-          border-radius: 0.75rem;
-        }
-
-        .plan-preview {
-          background: #ffffff;
-          padding: 1.5rem;
-          border-radius: 1rem;
-          box-shadow: 0 1px 2px rgba(15, 23, 42, 0.08);
-        }
-
-        .plan-preview h3 {
-          margin: 0 0 1rem;
-        }
-
-        .plan-preview ol {
-          list-style: none;
-          margin: 0;
-          padding: 0;
-          display: grid;
-          gap: 0.75rem;
-        }
-
-        .plan-preview li {
-          display: grid;
-          grid-template-columns: minmax(0, 120px) minmax(0, 100px) minmax(0, 120px) 1fr;
-          gap: 0.5rem;
-          align-items: baseline;
-          padding: 0.75rem;
-          border-radius: 0.75rem;
-          background: #f8fafc;
-        }
-
-        .step-number {
-          font-weight: 600;
-        }
-
-        .step-type {
-          font-size: 0.75rem;
-          letter-spacing: 0.1em;
-          color: #2563eb;
-        }
-
-        .purpose {
-          color: #475569;
-        }
-
-        @media (max-width: 720px) {
-          .plan-preview li {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-        }
-      `}</style>
+      </div>
     </main>
   );
 }
