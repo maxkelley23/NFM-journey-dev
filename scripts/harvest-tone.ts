@@ -62,7 +62,7 @@ if (!inputPath) {
 }
 
 async function main() {
-  const csvContent = await fs.readFile(inputPath, "utf8");
+  const csvContent = await fs.readFile(inputPath!, "utf8");
   const records = parse(csvContent, {
     columns: true,
     skip_empty_lines: true,
