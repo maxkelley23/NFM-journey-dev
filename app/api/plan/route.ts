@@ -96,8 +96,45 @@ async function fetchPlanFromOpenAI(intake: IntakePayload) {
   }
 }
 
+// Helper function to extract total days from cadence string
+function extractTotalDaysFromCadence(cadence: string): number {
+  // Look for patterns like "10 weeks", "3 months", "45 days", etc.
+  const weekMatch = cadence.match(/(\d+)\s*week/i);
+  if (weekMatch) {
+    return parseInt(weekMatch[1]) * 7;
+  }
+
+  const monthMatch = cadence.match(/(\d+)\s*month/i);
+  if (monthMatch) {
+    return parseInt(monthMatch[1]) * 30;
+  }
+
+  const dayMatch = cadence.match(/(\d+)\s*day/i);
+  if (dayMatch) {
+    return parseInt(dayMatch[1]);
+  }
+
+  // Default to 45 days if pattern not recognized
+  return 45;
+}
+
 function fallbackPlan(intake: IntakePayload) {
-  const baseSteps = DEFAULT_DELAYS.map((delay, index) => ({
+  // Use the specified length or default to 8
+  const emailCount = intake.length || 8;
+  const totalDays = intake.cadence ? extractTotalDaysFromCadence(intake.cadence) : 45;
+
+  // Generate delays that spread emails evenly across the timeframe
+  const generateDelays = (count: number, days: number) => {
+    if (count === 1) return [0];
+    const spacing = Math.floor(days / (count - 1));
+    return Array.from({ length: count }, (_, i) => i * spacing);
+  };
+
+  const delays = emailCount <= 8
+    ? DEFAULT_DELAYS.slice(0, emailCount)
+    : generateDelays(emailCount, totalDays);
+
+  const baseSteps = delays.map((delay, index) => ({
     n: index + 1,
     type: "email" as const,
     delay,
@@ -137,7 +174,21 @@ function normalizePlanSteps(steps: z.infer<typeof planSchema>["steps"], intake: 
     return fallbackPlan(intake).steps;
   }
 
-  const deduped = dedupeSteps(steps);
+  // Convert cumulative delays to relative delays
+  const sortedSteps = steps.sort((a, b) => a.delay - b.delay);
+  const relativeSteps = sortedSteps.map((step, index) => {
+    if (index === 0) {
+      return step; // First step keeps its delay (should be 0 or 1)
+    }
+    // Calculate relative delay from previous step
+    const prevDelay = sortedSteps[index - 1].delay;
+    return {
+      ...step,
+      delay: step.delay - prevDelay
+    };
+  });
+
+  const deduped = dedupeSteps(relativeSteps);
   return deduped.sort((a, b) => a.n - b.n);
 }
 
